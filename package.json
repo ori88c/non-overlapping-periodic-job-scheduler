@@ -1,0 +1,52 @@
+{
+  "name": "non-overlapping-periodic-job-scheduler",
+  "version": "1.0.0",
+  "description": "Peridic job scheduler which guarantees non-overlapping executions, with dynamically-chosen interval between executions",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ori88c/non-overlapping-periodic-job-scheduler.git"
+  },
+  "contributors": [
+    "Ori Cohen (https://github.com/ori88c/)"
+  ],
+  "homepage": "https://github.com/ori88c/non-overlapping-periodic-job-scheduler#readme",
+  "author": "Ori Cohen",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "test": "jest"
+  },
+  "keywords": [
+    "periodic",
+    "job",
+    "scheduler",
+    "interval",
+    "dynamic",
+    "executor",
+    "task",
+    "overlap",
+    "non-overlap",
+    "execution",
+    "typescript",
+    "ts"
+  ],
+  "engines": {
+    "node": ">=14.5.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "files": [
+    "src/",
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ]
+}
