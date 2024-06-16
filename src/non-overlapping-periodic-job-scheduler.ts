@@ -30,7 +30,7 @@ import { PeriodicJob, CalculateDelayTillNextExecution, NO_PREVIOUS_EXECUTION } f
  * 2. **Single Responsibility Principle**: The scheduler's sole responsibility is to manage the scheduling
  *    process.
  * 
- * ### Zero Over-Engineering, No External Dependencies
+ * ## Zero Over-Engineering, No External Dependencies
  * `setInterval` often falls short with fixed intervals, overlapping executions, and non-deterministic 
  * termination of the last execution. Custom solutions or external libraries usually come with numerous 
  * runtime dependencies, which can unnecessarily increase the project's size.
@@ -42,7 +42,7 @@ import { PeriodicJob, CalculateDelayTillNextExecution, NO_PREVIOUS_EXECUTION } f
  * does not perform any logging, as it is designed to be agnostic of user preferences, such as specific 
  * loggers or logging styles.
  * 
- * ### Fully Coverged
+ * ## Fully Coverged
  * This class is fully covered by unit tests.
  * 
  */
@@ -51,19 +51,17 @@ export class NonOverlappingPeriodicJobScheduler {
     private _nextExecutionTimer: NodeJS.Timeout | null = null;
     private _currentExecutionPromise: Promise<void> | null = null;
 
-    // Making the `setTimeout` callback non-async is a deliberate decision, to prevent
-    // dangling promises. As such cannot be awaited, which is crucial for a deterministic
-    // (graceful) `terminate` operation.
-    private readonly _triggerExecution: () => void;
+    // The `setTimeout` callback is deliberately non-async, to prevent dangling promises.
+    // Such are undesired, as they cannot be awaited, which is crucial for a deterministic
+    // (graceful) `stop` operation.
+    private readonly _triggerExecution = (): void => {
+        this._currentExecutionPromise = this._triggerCurrentExecutionAndScheduleNext();
+    };
 
     constructor(
         private readonly _periodicJob: PeriodicJob,
         private readonly _calculateDelayTillNextExecution: CalculateDelayTillNextExecution,
-    ) { 
-        this._triggerExecution = (): void => {
-            this._currentExecutionPromise = this._triggerCurrentExecutionAndScheduleNext();
-        };
-    }
+    ) { }
 
     public get isCurrentlyExecuting(): boolean {
         return this._currentExecutionPromise !== null;
@@ -78,6 +76,7 @@ export class NonOverlappingPeriodicJobScheduler {
             throw new Error('Cannot start an already started NonOverlappingPeriodicJobScheduler instance');
         }
 
+        this._isStopped = false;
         const firstExecutionDelay = this._calculateDelayTillNextExecution(NO_PREVIOUS_EXECUTION);
         this._nextExecutionTimer = setTimeout(this._triggerExecution, firstExecutionDelay);   
     }

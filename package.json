@@ -25,6 +25,7 @@
     "dynamic",
     "executor",
     "task",
+    "async",
     "overlap",
     "non-overlap",
     "execution",
