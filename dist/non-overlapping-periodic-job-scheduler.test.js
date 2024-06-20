@@ -35,7 +35,7 @@ const MOCK_INTERVAL_BETWEEN_CONSECUTIVE_STARTS = 5 * 1000;
  * to the originally planned start time.
  */
 const mockCalculateDelayTillNextExecution = (justFinishedExecutionDurationMs, justFinishedExecutionError) => {
-    if (index_1.NO_PREVIOUS_EXECUTION) {
+    if (justFinishedExecutionDurationMs === index_1.NO_PREVIOUS_EXECUTION) {
         return MOCK_FIRST_EXECUTION_MS_DELAY;
     }
     if (justFinishedExecutionError) {

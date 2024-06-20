@@ -17,6 +17,9 @@ export declare const NO_PREVIOUS_EXECUTION = -1;
  * prior execution data.
  * For example, the user may want the first execution to occur immediately after `start` (0ms delay).
  *
+ * ## With Great Power comes Great Responsibility
+ * This function should never throw. If it does, scheduling will stop.
+ *
  * ## Example Interval Policy
  * For example, the user may prefer a longer interval between successful executions and a shorter
  * interval after a failed attempt (indicated by an error). The scheduler does not consider other

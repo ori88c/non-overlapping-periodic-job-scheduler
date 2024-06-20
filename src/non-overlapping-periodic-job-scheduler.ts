@@ -24,8 +24,8 @@ import { PeriodicJob, CalculateDelayTillNextExecution, NO_PREVIOUS_EXECUTION } f
  * User provides a custom calculator function, to determine the delay until the next execution, based on
  * the runtime metadata of the just-finished execution (duration, error if thrown). 
  * This calculator is invoked at the **end** of each execution, enabling flexible interval policies based
- * on user-defined criteria. This approach ensures the scheduler remains simple, and focused solely on
- * scheduling. This approach adheres to two principles:
+ * on user-defined criteria. This approach ensures that the scheduler remains agnostic of scheduling-policy
+ * preferences, focusing solely on the scheduling process. In this way, we adhere to the following principles:
  * 1. **Information Expert Principle**: The interval policy is defined by the user.
  * 2. **Single Responsibility Principle**: The scheduler's sole responsibility is to manage the scheduling
  *    process.
@@ -58,6 +58,12 @@ export class NonOverlappingPeriodicJobScheduler {
         this._currentExecutionPromise = this._triggerCurrentExecutionAndScheduleNext();
     };
 
+    /**
+     * constructor
+     * 
+     * @param _periodicJob the periodic job
+     * @param _calculateDelayTillNextExecution check full documentation at types.ts
+     */
     constructor(
         private readonly _periodicJob: PeriodicJob,
         private readonly _calculateDelayTillNextExecution: CalculateDelayTillNextExecution,
@@ -71,6 +77,11 @@ export class NonOverlappingPeriodicJobScheduler {
         return this._isStopped;
     }
 
+    /**
+     * start
+     * 
+     * Initiates the scheduling of periodic jobs.
+     */
     public start(): void {
         if (!this._isStopped) {
             throw new Error('Cannot start an already started NonOverlappingPeriodicJobScheduler instance');
@@ -85,6 +96,13 @@ export class NonOverlappingPeriodicJobScheduler {
         return this._currentExecutionPromise ?? Promise.resolve();
     }
 
+    /**
+     * stop
+     * 
+     * Stops the scheduling of periodic jobs. If this method is invoked during an ongoing execution,
+     * it resolves once the current execution is complete. This guarantee provides determinism and 
+     * allows for graceful termination.
+     */
     public stop(): Promise<void> {
         this._isStopped = true;
 
@@ -113,7 +131,14 @@ export class NonOverlappingPeriodicJobScheduler {
         }
 
         const justFinishedExecutionDurationMs = Date.now() - startTime;
-        const delayTillNextExecution = this._calculateDelayTillNextExecution(justFinishedExecutionDurationMs, thrownError);
-        this._nextExecutionTimer = setTimeout(this._triggerExecution, delayTillNextExecution);        
+        try {
+            const delayTillNextExecution = this._calculateDelayTillNextExecution(justFinishedExecutionDurationMs, thrownError);
+            this._nextExecutionTimer = setTimeout(this._triggerExecution, delayTillNextExecution);       
+        } catch (err) {
+            // The calculator should never throw an error, so this scenario is unlikely.
+            // However, we handle it to ensure robustness.
+            this._isStopped = true;
+            throw err;
+        }
     }
 }

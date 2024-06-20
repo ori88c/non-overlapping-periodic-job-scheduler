@@ -23,8 +23,8 @@ import { PeriodicJob, CalculateDelayTillNextExecution } from './types';
  * User provides a custom calculator function, to determine the delay until the next execution, based on
  * the runtime metadata of the just-finished execution (duration, error if thrown).
  * This calculator is invoked at the **end** of each execution, enabling flexible interval policies based
- * on user-defined criteria. This approach ensures the scheduler remains simple, and focused solely on
- * scheduling. This approach adheres to two principles:
+ * on user-defined criteria. This approach ensures that the scheduler remains agnostic of scheduling-policy
+ * preferences, focusing solely on the scheduling process. In this way, we adhere to the following principles:
  * 1. **Information Expert Principle**: The interval policy is defined by the user.
  * 2. **Single Responsibility Principle**: The scheduler's sole responsibility is to manage the scheduling
  *    process.
@@ -52,11 +52,29 @@ export declare class NonOverlappingPeriodicJobScheduler {
     private _nextExecutionTimer;
     private _currentExecutionPromise;
     private readonly _triggerExecution;
+    /**
+     * constructor
+     *
+     * @param _periodicJob the periodic job
+     * @param _calculateDelayTillNextExecution check full documentation at types.ts
+     */
     constructor(_periodicJob: PeriodicJob, _calculateDelayTillNextExecution: CalculateDelayTillNextExecution);
     get isCurrentlyExecuting(): boolean;
     get isStopped(): boolean;
+    /**
+     * start
+     *
+     * Initiates the scheduling of periodic jobs.
+     */
     start(): void;
     waitTillCurrentExecutionSettles(): Promise<void>;
+    /**
+     * stop
+     *
+     * Stops the scheduling of periodic jobs. If this method is invoked during an ongoing execution,
+     * it resolves once the current execution is complete. This guarantee provides determinism and
+     * allows for graceful termination.
+     */
     stop(): Promise<void>;
     private _triggerCurrentExecutionAndScheduleNext;
 }
