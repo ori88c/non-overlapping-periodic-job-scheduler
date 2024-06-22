@@ -1,17 +1,18 @@
 # non-overlapping-periodic-job-scheduler
 
-The `NonOverlappingPeriodicJobScheduler` class implements a slim yet highly flexible periodic-job scheduler, which is agnostic of the user-defined scheduling policy. It focuses on three aspects:
-* __Non-Overlapping Executions__
-* __Deterministic Termination__
-* __Dynamic Interval between Executions__
+The `NonOverlappingPeriodicJobScheduler` class implements a slim yet highly flexible periodic-job scheduler, which is agnostic of the user-defined scheduling policy.
+
+The delay between executions is determined by a user-defined calculator function, allowing scheduling to be either interval-based or time-based, while also considering runtime factors known to the user.
 
 ## Key Features
 
-- ES6 Compatibility.
-- TypeScript support.
-- Graceful / deterministic termination: If the `stop` method is executed during a job-execution, it will resolve only once the execution completes.
-- User-defined scheduling policy, injected from the c'tor.
-- No external runtime dependencies: Only development dependencies are used.
+* __Non-Overlapping Executions__.
+* __Deterministic Termination__: If the `stop` method is called during a job-execution, it will resolve only once the execution completes.
+* __Dynamic Interval between Executions__: Achieved via a user-defined calculator function, which sets the scheduling policy by calculating the delay until the next execution. This design allows users to consider various runtime factors if required.
+* Non-durable scheduling: If the app crashes or goes down, scheduling stops.
+* No external runtime dependencies: Only development dependencies are used.
+* ES6 Compatibility.
+* TypeScript support.
 
 ## Non-Overlapping Executions
 
@@ -19,22 +20,30 @@ Ensures that executions do not overlap. This is suitable for scenarios where ove
 
 ## Deterministic / Graceful Termination
 
-When stopping periodic executions, it is crucial to ensure that any ongoing execution is completed before termination. This deterministic termination approach ensures that no unfinished executions leave objects in memory, which could otherwise lead to unexpected behavior.
+This topic is often overlooked in the context of schedulers.
+When stopping periodic executions, it is crucial to ensure that any potentially ongoing execution is completed before termination. This deterministic termination approach ensures that no unfinished executions leave objects in memory, which could otherwise lead to unexpected behavior.
 
 Without deterministic termination, leftover references from incomplete executions can cause issues, such as unexpected behavior during unit tests. A clean state is necessary for each test, and ongoing jobs from a previous test can interfere with subsequent tests.
 
 ## Dynamic Execution Interval
-User provides a custom calculator function, to determine the delay until the next execution, based on the runtime metadata of the just-finished execution (duration, error if thrown).  
+
+User provides a custom calculator function, to determine the delay until the next execution, based on the runtime metadata of the just-finished execution (duration, error if thrown).
+
 This calculator is invoked at the **end** of each execution, enabling flexible interval policies based on user-defined criteria. This approach ensures that the scheduler remains agnostic of scheduling-policy preferences, focusing solely on the scheduling process. In this way, we adhere to the following principles:
 * __Information Expert Principle__: The interval policy is defined by the user.
 * __Single Responsibility Principle__: The scheduler's sole responsibility is to manage the scheduling process.
 
 ## Zero Over-Engineering, No External Dependencies
-`setInterval` often falls short with fixed intervals, overlapping executions, and non-deterministic termination of the last execution. Custom solutions or external libraries usually come with numerous runtime dependencies, which can unnecessarily increase the project's size.
 
-This class offers a lightweight, dependency-free solution. It can also serve as a building block for
+This component offers a lightweight, dependency-free solution. It can also serve as a building block for
 more advanced implementations, if necessary.
- 
+
+## Non-Persistent Scheduling
+
+This component features non-durable scheduling, which means that if the app crashes or goes down, scheduling stops.
+
+If you need to guarantee durability over a multi-node deployment, consider using this scheduler as a building block or use other custom-made solutions for that purpose. Generally, maintaining a timestamp of the last successful execution in a persistent database is usually sufficient to introduce durability.
+
 ## Error Handling
 
 If a periodic job throws an error, the error will be passed to the calculator function. The scheduler does not perform any logging, as it is designed to be agnostic of user preferences, such as specific loggers or logging styles.
@@ -53,16 +62,19 @@ import {
   NO_PREVIOUS_EXECUTION
 } from 'non-overlapping-periodic-job-scheduler';
 
-// More-advanced calculator examples will be given in the next section.
-const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (_: number): number => {
-  // Simplest possible implementation:
-  // After each execution, we wait a fixed value (5000 ms), before triggering the next one.
-  // First execution starts 5000ms after `start()` is invoked.
-  return 5000;
-};
+const MS_DELAY_AFTER_COMPLETION = 5000;
+const calculateDelayTillNextFetch: CalculateDelayTillNextExecution =
+  (_: number): number => {
+    // Simplest possible implementation:
+    // After each execution, the scheduler waits a fixed duration (5000 ms),
+    // before triggering the next one.
+    // First execution starts 5000ms after `start()` is called.
+    return MS_DELAY_AFTER_COMPLETION;
+  };
 
 class ThreatIntelligenceAggregator {
-  private readonly _fetchLatestThreatsScheduler = new NonOverlappingPeriodicJobScheduler(
+  private readonly _fetchLatestThreatsScheduler = 
+    new NonOverlappingPeriodicJobScheduler(
       this.fetchLatestThreatFeeds.bind(this),
       calculateDelayTillNextFetch
     );
@@ -73,8 +85,8 @@ class ThreatIntelligenceAggregator {
   }
 
   public async stop(): Promise<void> {
-    // Stop may not be immediate, as given a job-execution is currently ongoing, `stop` resolves
-    // only once that execution completes.
+    // Stop may not be immediate, as given a job-execution is currently ongoing,
+    // `stop` resolves only once that execution completes.
     await this._fetchLatestThreatFeedsScheduler.stop();
     // Additional stop operations...
   }
@@ -85,13 +97,26 @@ class ThreatIntelligenceAggregator {
 }
 ```
 
-## Advanced user-defined Scheduling Policies
+## Time-Based Scheduling Policy
+
+Consider a scenario where executions should occur at fixed times of the day, for example, three times per hour at XX:00:00, XX:20:00, and XX:40:00. In other words, every 20 minutes on the clock. This scheduling policy can be implemented using the following calculator:
+```ts
+const MS_DELAY_BETWEEN_STARTS = 20 * 60 * 1000; // 20 minutes in milliseconds.
+const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = 
+  (_: number): number => {
+    const now = new Date();
+    return MS_DELAY_BETWEEN_STARTS - now.getTime() % MS_DELAY_BETWEEN_STARTS;
+  };
+```
+
+## Interval-Based Scheduling Policies
 
 ### Basic example
+
 Let's start with the simplest example, which involves having a fixed interval. Formally, the determined interval is the delay between the **end** of the i-th execution and the **start** of the (i+1)-th execution.
 ```ts
 const FIXED_MS_DELAY_BETWEEN_EXECUTIONS = 5000;
-const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (
+const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
   justFinishedExecutionDurationMs: number,
   justFinishedExecutionError?: Error
 ): number => {
@@ -99,13 +124,16 @@ const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (
 };
 ```
 
-### Considering both arguments
-A slightly more advanced example may consider both arguments.
+### Considering the error argument
+
+A slightly more advanced example might consider the error argument if the user prefers a more frequent interval until success.
 ```ts
+import { NO_PREVIOUS_EXECUTION } from 'non-overlapping-periodic-job-scheduler';
+
 const FIRST_EXECUTION_MS_DELAY = 10 * 1000;
-const RATIO_BETWEEN_DELAY_AND_FORMER_EXECUTION = 3;
+const MS_DELAY_AFTER_SUCCESS = 20 * 1000;
 const MS_DELAY_AFTER_FAILURE = 4000;
-const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (
+const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
   justFinishedExecutionDurationMs: number,
   justFinishedExecutionError?: Error
 ): number => {
@@ -117,15 +145,18 @@ const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (
     return MS_DELAY_AFTER_FAILURE;
   }
 
-  return justFinishedExecutionDurationMs * RATIO_BETWEEN_DELAY_AND_FORMER_EXECUTION;
+  return MS_DELAY_AFTER_SUCCESS;
 };
 ```
 
-### Mimicking `setInterval`
+### Mimicking 'setInterval'
+
 If you want to mimic the behavior of `setInterval`, which maintains a fixed interval between **start** times, you should be aware that the duration of a job execution might exceed the interval. A simple scheduling policy might decide that, under such circumstances, the next execution should occur immediately.
 ```ts
+import { NO_PREVIOUS_EXECUTION } from 'non-overlapping-periodic-job-scheduler';
+
 const FIXED_MS_DELAY = 5000;
-const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (
+const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
   justFinishedExecutionDurationMs: number
 ): number => {
   if (justFinishedExecutionDurationMs === NO_PREVIOUS_EXECUTION) {
@@ -142,7 +173,8 @@ const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (
 };
 ```
 
-### Alternative `setInterval` mimicking
+### Alternative 'setInterval' mimicking
+
 Another approach to mimicking the `setInterval` policy, while dealing with potential overlapping executions, is to schedule only according to the originally planned start time. Overlapped start times will be skipped.
 
 Formally, start times will correspond to the formula START_TIMESTAMP + N * FIXED_MS_DELAY, where N is a natural number. For example, the following ascending start times sequence implies that the first execution took more than FIXED_MS_DELAY, but less than 2 * FIXED_MS_DELAY. This can be deduced by the missing start timestamp:
@@ -153,8 +185,10 @@ Formally, start times will correspond to the formula START_TIMESTAMP + N * FIXED
 
 Such a scheduling policy can be useful for aggregation jobs, where a recently executed job implies that the data is still fresh.
 ```ts
+import { NO_PREVIOUS_EXECUTION } from 'non-overlapping-periodic-job-scheduler';
+
 const FIXED_MS_DELAY = 5000;
-const calculateDelayTillNextFetch: CalculateDelayTillNextExecution = (
+const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
   justFinishedExecutionDurationMs: number
 ): number => {
   if (justFinishedExecutionDurationMs === NO_PREVIOUS_EXECUTION) {

@@ -1,7 +1,7 @@
 {
   "name": "non-overlapping-periodic-job-scheduler",
-  "version": "1.0.0",
-  "description": "Periodic job scheduler that guarantees non-overlapping executions. It features a dynamically chosen interval between executions and graceful termination.",
+  "version": "1.0.1",
+  "description": "Periodic job scheduler ensuring non-overlapping executions and deterministic termination. Features a dynamically chosen interval between executions, determined by a user-injected calculator function.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ori88c/non-overlapping-periodic-job-scheduler.git"
