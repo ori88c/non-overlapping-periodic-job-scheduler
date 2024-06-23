@@ -13,6 +13,7 @@ The delay between executions is determined by a user-defined calculator function
 * No external runtime dependencies: Only development dependencies are used.
 * ES6 Compatibility.
 * TypeScript support.
+* Fully covered by unit tests.
 
 ## Non-Overlapping Executions
 
@@ -48,10 +49,6 @@ If you need to guarantee durability over a multi-node deployment, consider using
 
 If a periodic job throws an error, the error will be passed to the calculator function. The scheduler does not perform any logging, as it is designed to be agnostic of user preferences, such as specific loggers or logging styles.
 
-## Fully Covered
-
-This class is fully covered by unit tests.
-
 ## Use-case Example
 
 ```ts
@@ -73,26 +70,26 @@ const calculateDelayTillNextFetch: CalculateDelayTillNextExecution =
   };
 
 class ThreatIntelligenceAggregator {
-  private readonly _fetchLatestThreatsScheduler = 
+  private readonly _threatFeedsScheduler = 
     new NonOverlappingPeriodicJobScheduler(
       this.fetchLatestThreatFeeds.bind(this),
       calculateDelayTillNextFetch
     );
 
   public start(): void {
-    this._fetchLatestThreatFeedsScheduler.start();
-    // Additional start operations...
+    this._threatFeedsScheduler.start();
+    // Additional start operations.
   }
 
   public async stop(): Promise<void> {
     // Stop may not be immediate, as given a job-execution is currently ongoing,
     // `stop` resolves only once that execution completes.
-    await this._fetchLatestThreatFeedsScheduler.stop();
-    // Additional stop operations...
+    await this._threatFeedsScheduler.stop();
+    // Additional stop operations.
   }
 
   private async fetchLatestThreatFeeds(): Promise<void> {
-    // Do your magic here
+    // Do your magic here.
   }
 }
 ```
@@ -104,10 +101,10 @@ Consider a scenario where executions should occur at fixed times of the day, for
 const MS_DELAY_BETWEEN_STARTS = 20 * 60 * 1000; // 20 minutes in milliseconds.
 const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = 
   (_: number): number => {
-    const now = new Date();
-    return MS_DELAY_BETWEEN_STARTS - now.getTime() % MS_DELAY_BETWEEN_STARTS;
+    return MS_DELAY_BETWEEN_STARTS - Date.now() % MS_DELAY_BETWEEN_STARTS;
   };
 ```
+Please note that due to the non-overlapping nature of this scheduler, if an execution exceeds 20 minutes, its subsequent scheduled start time (e.g., 00:40:00) will be skipped.
 
 ## Interval-Based Scheduling Policies
 
