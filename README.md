@@ -1,6 +1,6 @@
 # non-overlapping-periodic-job-scheduler
 
-The `NonOverlappingPeriodicJobScheduler` class implements a slim yet highly flexible periodic-job scheduler, which is agnostic of the user-defined scheduling policy.
+The `NonOverlappingPeriodicJobScheduler` class implements a slim yet highly flexible periodic-job scheduler for Node.js projects, ensuring non-overlapping job executions.
 
 The delay between executions is determined by a user-defined calculator function, allowing scheduling to be either interval-based or time-based, while also considering runtime factors known to the user.
 
@@ -8,7 +8,7 @@ The delay between executions is determined by a user-defined calculator function
 
 * __Non-Overlapping Executions__.
 * __Deterministic Termination__: If the `stop` method is called during a job-execution, it will resolve only once the execution completes.
-* __Dynamic Interval between Executions__: Achieved via a user-defined calculator function, which sets the scheduling policy by calculating the delay until the next execution. This design allows users to consider various runtime factors if required.
+* __Dynamic Interval between Executions__: This design allows users to consider various runtime factors if required, while the scheduler remains agnostic to the user-defined scheduling policy.
 * Non-durable scheduling: If the app crashes or goes down, scheduling stops.
 * No external runtime dependencies: Only development dependencies are used.
 * ES6 Compatibility.
@@ -17,11 +17,11 @@ The delay between executions is determined by a user-defined calculator function
 
 ## Non-Overlapping Executions
 
-Ensures that executions do not overlap. This is suitable for scenarios where overlapping executions may cause race conditions, or negatively impact performance.
+Executions do not overlap because the (i+1)th execution is scheduled immediately after the ith execution completes. This is suitable for scenarios where overlapping executions may cause race conditions, or negatively impact performance.
 
 ## Deterministic / Graceful Termination
 
-This topic is often overlooked in the context of schedulers.
+This topic is **often overlooked** in the context of schedulers.  
 When stopping periodic executions, it is crucial to ensure that any potentially ongoing execution is completed before termination. This deterministic termination approach ensures that no unfinished executions leave objects in memory, which could otherwise lead to unexpected behavior.
 
 Without deterministic termination, leftover references from incomplete executions can cause issues, such as unexpected behavior during unit tests. A clean state is necessary for each test, and ongoing jobs from a previous test can interfere with subsequent tests.
