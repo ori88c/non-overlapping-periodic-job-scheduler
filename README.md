@@ -9,6 +9,7 @@ The delay between executions is determined by a user-defined calculator function
 * __Non-Overlapping Executions__.
 * __Deterministic Termination__: If the `stop` method is called during a job-execution, it will resolve only once the execution completes.
 * __Dynamic Interval between Executions__: This design allows users to consider various runtime factors if required, while the scheduler remains agnostic to the user-defined scheduling policy.
+* __Comprehensive documentation__: The class is thoroughly documented, enabling IDEs to provide helpful tooltips that enhance the coding experience.
 * Non-durable scheduling: If the app crashes or goes down, scheduling stops.
 * No external runtime dependencies: Only development dependencies are used.
 * ES6 Compatibility.
@@ -96,6 +97,10 @@ class ThreatIntelligenceAggregator {
 
 ## Time-Based Scheduling Policy
 
+Time-based scheduling disregards the execution's metadata (such as duration or thrown errors) and is measured against absolute timestamps on the clock.
+
+### Every 20 minutes on the clock
+
 Consider a scenario where executions should occur at fixed times of the day, for example, three times per hour at XX:00:00, XX:20:00, and XX:40:00. In other words, every 20 minutes on the clock. This scheduling policy can be implemented using the following calculator:
 ```ts
 const MS_DELAY_BETWEEN_STARTS = 20 * 60 * 1000; // 20 minutes in milliseconds.
@@ -106,7 +111,28 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution =
 ```
 Please note that due to the non-overlapping nature of this scheduler, if an execution exceeds 20 minutes, its subsequent scheduled start time (e.g., 00:40:00) will be skipped.
 
+### Daily execution at a Fixed Hour
+
+Consider a scenario where the execution should occur once a day at 16:00 (4 PM). A suitable calculator function might be:
+```ts
+const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
+const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = 
+  (_: number): number => {
+    const todayAt16 = new Date();
+    todayAt16.setHours(16, 0, 0, 0);
+
+    const msTillExecution = todayAt16.getTime() - Date.now();
+    if (msTillExecution >= 0) {
+      return msTillExecution;
+    }
+
+    return MS_IN_ONE_DAY + msTillExecution;
+  };
+```
+
 ## Interval-Based Scheduling Policies
+
+Interval-based scheduling ignores absolute timestamps on the clock. It is applicable when the interval between executions matters more than the exact timing of each execution. Unlike most schedulers, this variant allows the gap to be determined during runtime, enabling consideration of runtime factors.
 
 ### Basic example
 
@@ -121,7 +147,7 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
 };
 ```
 
-### Considering the error argument
+### Considering the Error Argument
 
 A slightly more advanced example might consider the error argument if the user prefers a more frequent interval until success.
 ```ts

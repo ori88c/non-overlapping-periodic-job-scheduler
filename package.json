@@ -1,6 +1,6 @@
 {
   "name": "non-overlapping-periodic-job-scheduler",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Periodic job scheduler ensuring non-overlapping executions and deterministic termination. Features a dynamically chosen interval between executions, determined by a user-injected calculator function.",
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "executor",
     "task",
     "async",
+    "runner",
     "overlap",
     "non-overlap",
     "execution",
