@@ -1,26 +1,26 @@
-# non-overlapping-periodic-job-scheduler
+<h2 align="middle">Non-Overlapping Periodic Job Scheduler</h2>
 
 The `NonOverlappingPeriodicJobScheduler` class implements a slim yet highly flexible periodic-job scheduler for Node.js projects, ensuring non-overlapping job executions.
 
 The delay between executions is determined by a user-defined calculator function, allowing scheduling to be either interval-based or time-based, while also considering runtime factors known to the user.
 
-## Key Features
+## Key Features :sparkles:
 
 * __Non-Overlapping Executions__.
 * __Deterministic Termination__: If the `stop` method is called during a job-execution, it will resolve only once the execution completes.
 * __Dynamic Interval between Executions__: This design allows users to consider various runtime factors if required, while the scheduler remains agnostic to the user-defined scheduling policy.
-* __Comprehensive documentation__: The class is thoroughly documented, enabling IDEs to provide helpful tooltips that enhance the coding experience.
+* __Comprehensive documentation :books:__: The class is thoroughly documented, enabling IDEs to provide helpful tooltips that enhance the coding experience.
+* __Fully Tested__: Covered extensively by unit tests.
+* __No External Runtime Dependencies__: Lightweight component, only development dependencies are used.
 * Non-durable scheduling: If the app crashes or goes down, scheduling stops.
-* No external runtime dependencies: Only development dependencies are used.
-* ES6 Compatibility.
+* ES2020 Compatibility.
 * TypeScript support.
-* Fully covered by unit tests.
 
 ## Non-Overlapping Executions
 
 Executions do not overlap because the (i+1)th execution is scheduled immediately after the ith execution completes. This is suitable for scenarios where overlapping executions may cause race conditions, or negatively impact performance.
 
-## Deterministic / Graceful Termination
+## Graceful and Deterministic Termination :hourglass:
 
 This topic is **often overlooked** in the context of schedulers.  
 When stopping periodic executions, it is crucial to ensure that any potentially ongoing execution is completed before termination. This deterministic termination approach ensures that no unfinished executions leave objects in memory, which could otherwise lead to unexpected behavior.
@@ -46,11 +46,11 @@ This component features non-durable scheduling, which means that if the app cras
 
 If you need to guarantee durability over a multi-node deployment, consider using this scheduler as a building block or use other custom-made solutions for that purpose. Generally, maintaining a timestamp of the last successful execution in a persistent database is usually sufficient to introduce durability.
 
-## Error Handling
+## Error Handling :warning:
 
 If a periodic job throws an error, the error will be passed to the calculator function. The scheduler does not perform any logging, as it is designed to be agnostic of user preferences, such as specific loggers or logging styles.
 
-## Use-case Example
+## Use-case Example :man_technologist:
 
 ```ts
 import { 
@@ -99,7 +99,7 @@ class ThreatIntelligenceAggregator {
 
 Time-based scheduling disregards the execution's metadata (such as duration or thrown errors) and is measured against absolute timestamps on the clock.
 
-### Every 20 minutes on the clock
+### Every 20 minutes on the clock :man_technologist:
 
 Consider a scenario where executions should occur at fixed times of the day, for example, three times per hour at XX:00:00, XX:20:00, and XX:40:00. In other words, every 20 minutes on the clock. This scheduling policy can be implemented using the following calculator:
 ```ts
@@ -111,7 +111,7 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution =
 ```
 Please note that due to the non-overlapping nature of this scheduler, if an execution exceeds 20 minutes, its subsequent scheduled start time (e.g., 00:40:00) will be skipped.
 
-### Daily execution at a Fixed Hour
+### Daily execution at a Fixed Hour :man_technologist:
 
 Consider a scenario where the execution should occur once a day at 16:00 (4 PM). A suitable calculator function might be:
 ```ts
@@ -134,7 +134,7 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution =
 
 Interval-based scheduling ignores absolute timestamps on the clock. It is applicable when the interval between executions matters more than the exact timing of each execution. Unlike most schedulers, this variant allows the gap to be determined during runtime, enabling consideration of runtime factors.
 
-### Basic example
+### Basic example :man_technologist:
 
 Let's start with the simplest example, which involves having a fixed interval. Formally, the determined interval is the delay between the **end** of the i-th execution and the **start** of the (i+1)-th execution.
 ```ts
@@ -147,7 +147,7 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
 };
 ```
 
-### Considering the Error Argument
+### Considering the Error Argument :man_technologist:
 
 A slightly more advanced example might consider the error argument if the user prefers a more frequent interval until success.
 ```ts
@@ -172,7 +172,7 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
 };
 ```
 
-### Mimicking 'setInterval'
+### Mimicking 'setInterval' :man_technologist:
 
 If you want to mimic the behavior of `setInterval`, which maintains a fixed interval between **start** times, you should be aware that the duration of a job execution might exceed the interval. A simple scheduling policy might decide that, under such circumstances, the next execution should occur immediately.
 ```ts
@@ -196,7 +196,7 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
 };
 ```
 
-### Alternative 'setInterval' mimicking
+### Alternative 'setInterval' mimicking :man_technologist:
 
 Another approach to mimicking the `setInterval` policy, while dealing with potential overlapping executions, is to schedule only according to the originally planned start time. Overlapped start times will be skipped.
 
@@ -224,6 +224,10 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
 };
 ```
 
+## Breaking Change in Version 2.0.0
+
+In version 2.0.0, the target compatibility has been upgraded from ES6 to ES2020. This change was made to leverage the widespread adoption of ES2020, in particular its native support for async/await.
+
 ## Naming Convention
 
 It is highly recommended to assign a use-case-specific name to your scheduler instances. This practice helps in clearly identifying the purpose of each scheduler in the codebase. Examples include:
@@ -233,6 +237,6 @@ It is highly recommended to assign a use-case-specific name to your scheduler in
 - healthDiagnosticsScheduler
 - archiveOldLogsScheduler
 
-## License
+## License :scroll:
 
 [MIT](LICENSE)
