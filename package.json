@@ -1,6 +1,6 @@
 {
   "name": "non-overlapping-periodic-job-scheduler",
-  "version": "1.0.5",
+  "version": "2.0.0",
   "description": "Periodic job scheduler ensuring non-overlapping executions and deterministic termination. Features a dynamically chosen interval between executions, determined by a user-injected calculator function.",
   "repository": {
     "type": "git",
@@ -19,19 +19,29 @@
   },
   "keywords": [
     "periodic",
+    "recurring",
     "job",
+    "task",
+    "periodic-job",
+    "periodic-task",
+    "recurring-job",
+    "recurring-task",
     "scheduler",
     "interval",
+    "time-interval",
     "dynamic",
     "executor",
-    "task",
+    "executions",
+    "task-manager",
+    "job-manager",
     "async",
     "runner",
     "overlap",
     "non-overlap",
     "execution",
     "typescript",
-    "ts"
+    "ts",
+    "node.js"
   ],
   "engines": {
     "node": ">=14.5.0"
