@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NonOverlappingPeriodicJobScheduler = void 0;
 const types_1 = require("./types");
@@ -97,8 +88,7 @@ class NonOverlappingPeriodicJobScheduler {
         this._nextExecutionTimer = setTimeout(this._triggerExecution, firstExecutionDelay);
     }
     waitTillCurrentExecutionSettles() {
-        var _a;
-        return (_a = this._currentExecutionPromise) !== null && _a !== void 0 ? _a : Promise.resolve();
+        return this._currentExecutionPromise ?? Promise.resolve();
     }
     /**
      * stop
@@ -115,33 +105,31 @@ class NonOverlappingPeriodicJobScheduler {
         }
         return this.waitTillCurrentExecutionSettles();
     }
-    _triggerCurrentExecutionAndScheduleNext() {
-        return __awaiter(this, void 0, void 0, function* () {
-            this._nextExecutionTimer = null;
-            let thrownError = undefined;
-            const startTime = Date.now();
-            try {
-                yield this._periodicJob();
-            }
-            catch (err) {
-                thrownError = err;
-            }
-            this._currentExecutionPromise = null;
-            if (this._isStopped) {
-                return;
-            }
-            const justFinishedExecutionDurationMs = Date.now() - startTime;
-            try {
-                const delayTillNextExecution = this._calculateDelayTillNextExecution(justFinishedExecutionDurationMs, thrownError);
-                this._nextExecutionTimer = setTimeout(this._triggerExecution, delayTillNextExecution);
-            }
-            catch (err) {
-                // The calculator should never throw an error, so this scenario is unlikely.
-                // However, we handle it to ensure robustness.
-                this._isStopped = true;
-                throw err;
-            }
-        });
+    async _triggerCurrentExecutionAndScheduleNext() {
+        this._nextExecutionTimer = null;
+        let thrownError = undefined;
+        const startTime = Date.now();
+        try {
+            await this._periodicJob();
+        }
+        catch (err) {
+            thrownError = err;
+        }
+        this._currentExecutionPromise = null;
+        if (this._isStopped) {
+            return;
+        }
+        const justFinishedExecutionDurationMs = Date.now() - startTime;
+        try {
+            const delayTillNextExecution = this._calculateDelayTillNextExecution(justFinishedExecutionDurationMs, thrownError);
+            this._nextExecutionTimer = setTimeout(this._triggerExecution, delayTillNextExecution);
+        }
+        catch (err) {
+            // The calculator should never throw an error, so this scenario is unlikely.
+            // However, we handle it to ensure robustness.
+            this._isStopped = true;
+            throw err;
+        }
     }
 }
 exports.NonOverlappingPeriodicJobScheduler = NonOverlappingPeriodicJobScheduler;

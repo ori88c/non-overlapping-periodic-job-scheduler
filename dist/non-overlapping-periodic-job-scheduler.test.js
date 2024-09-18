@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const index_1 = require("./index");
 /**
@@ -16,9 +7,9 @@ const index_1 = require("./index");
  * The one-and-only purpose of this function, is triggerring an event-loop iteration.
  * It is relevant whenever a test needs to simulate tasks from the Node.js' micro-tasks queue.
  */
-const resolveFast = () => __awaiter(void 0, void 0, void 0, function* () {
+const resolveFast = async () => {
     expect(14).toBeGreaterThan(3);
-});
+};
 const MOCK_FIRST_EXECUTION_MS_DELAY = 500;
 const MOCK_MS_DELAY_AFTER_FAILED_JOB = 3 * 1000;
 const MOCK_INTERVAL_BETWEEN_CONSECUTIVE_STARTS = 5 * 1000;
@@ -60,7 +51,7 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
         jest.useRealTimers();
     });
     describe('Happy path tests', () => {
-        test('should trigger executions as expected, when all executions succeed', () => __awaiter(void 0, void 0, void 0, function* () {
+        test('should trigger executions as expected, when all executions succeed', async () => {
             // Each job execution returns a pending promise, and we store its resolve callback,
             // which enables us to control the flow (resolve time).
             let resolveCurrentJobExecution;
@@ -80,20 +71,20 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
                 expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(currentExecution);
                 // The next-execution's `setTimeout` callback will be invoked now.
                 jest.runOnlyPendingTimers();
-                yield resolveFast();
+                await resolveFast();
                 expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
                 expect(scheduler.isStopped).toBe(false);
-                expect(scheduler.isCurrentlyExecuting).toBe(true); // Till we resolve, the promise is in pending-state.
+                expect(scheduler.isCurrentlyExecuting).toBe(true); // Until we resolve, the promise is in a pending state.
                 resolveCurrentJobExecution();
-                yield scheduler.waitTillCurrentExecutionSettles();
+                await scheduler.waitTillCurrentExecutionSettles();
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(false);
             }
-            yield scheduler.stop();
+            await scheduler.stop();
             expect(scheduler.isStopped).toBe(true);
             expect(scheduler.isCurrentlyExecuting).toBe(false);
-        }));
-        test('should trigger executions as expected, when all executions fail (job promise rejects)', () => __awaiter(void 0, void 0, void 0, function* () {
+        });
+        test('should trigger executions as expected, when all executions fail (job promise rejects)', async () => {
             // Each job execution returns a pending promise, and we store its reject callback,
             // which enables us to control the flow (resolve time).
             let rejectCurrentJobExecution;
@@ -113,20 +104,20 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
                 expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(currentExecution);
                 // The next-execution's `setTimeout` callback will be invoked now.
                 jest.runOnlyPendingTimers();
-                yield resolveFast();
+                await resolveFast();
                 expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
                 expect(scheduler.isStopped).toBe(false);
-                expect(scheduler.isCurrentlyExecuting).toBe(true); // Till we reject, the promise is in pending-state.
+                expect(scheduler.isCurrentlyExecuting).toBe(true); // Until we reject, the promise is in a pending state.
                 rejectCurrentJobExecution(new Error('Why bad things happen to good jobs?'));
-                yield scheduler.waitTillCurrentExecutionSettles();
+                await scheduler.waitTillCurrentExecutionSettles();
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(false);
             }
-            yield scheduler.stop();
+            await scheduler.stop();
             expect(scheduler.isStopped).toBe(true);
             expect(scheduler.isCurrentlyExecuting).toBe(false);
-        }));
-        test('should trigger executions as expected, when some succeed and some fail', () => __awaiter(void 0, void 0, void 0, function* () {
+        });
+        test('should trigger executions as expected, when some succeed and some fail', async () => {
             let jobNumber = 1;
             let finishCurrentJobExecution; // Either resolve or reject.
             const job = () => {
@@ -155,23 +146,26 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
                 expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(currentExecution);
                 // The next-execution's `setTimeout` callback will be invoked now.
                 jest.runOnlyPendingTimers();
-                yield resolveFast();
+                await resolveFast();
                 expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(true);
                 finishCurrentJobExecution();
-                yield scheduler.waitTillCurrentExecutionSettles();
+                await scheduler.waitTillCurrentExecutionSettles();
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(false);
             }
-            yield scheduler.stop();
+            await scheduler.stop();
             expect(scheduler.isStopped).toBe(true);
             expect(scheduler.isCurrentlyExecuting).toBe(false);
-        }));
+        });
     });
     describe('Negative path tests', () => {
         test('should throw when starting an already started instance', () => {
-            const job = () => new Promise(_ => { }); // Never resolves. A job won't be executed anyway.
+            let wasExcetued = false;
+            const job = () => new Promise(_ => {
+                wasExcetued = true; // The flow should not reach this point.
+            });
             const jobSpy = jest.fn()
                 .mockImplementation(job);
             const scheduler = new index_1.NonOverlappingPeriodicJobScheduler(jobSpy, nextDelayCalculatorSpy);
@@ -180,6 +174,7 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
             expect(scheduler.isCurrentlyExecuting).toBe(false);
             expect(jobSpy).toHaveBeenCalledTimes(0);
             expect(() => scheduler.start()).toThrow();
+            expect(wasExcetued).toBe(false);
         });
     });
 });
