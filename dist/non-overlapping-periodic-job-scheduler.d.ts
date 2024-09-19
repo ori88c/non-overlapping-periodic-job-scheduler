@@ -45,7 +45,7 @@ import { PeriodicJob, CalculateDelayTillNextExecution } from './types';
  * This class is fully covered by unit tests.
  *
  */
-export declare class NonOverlappingPeriodicJobScheduler {
+export declare class NonOverlappingPeriodicJobScheduler<JobError = Error> {
     private readonly _periodicJob;
     private readonly _calculateDelayTillNextExecution;
     private _isStopped;
@@ -55,11 +55,21 @@ export declare class NonOverlappingPeriodicJobScheduler {
     /**
      * constructor
      *
-     * @param _periodicJob the periodic job
-     * @param _calculateDelayTillNextExecution check full documentation at types.ts
+     * @param _periodicJob A periodic job.
+     * @param _calculateDelayTillNextExecution Function to calculate the delay until the
+     *                                         next execution, based on the duration and
+     *                                         any error thrown by the previous execution.
      */
-    constructor(_periodicJob: PeriodicJob, _calculateDelayTillNextExecution: CalculateDelayTillNextExecution);
+    constructor(_periodicJob: PeriodicJob, _calculateDelayTillNextExecution: CalculateDelayTillNextExecution<JobError>);
     get isCurrentlyExecuting(): boolean;
+    /**
+     * isStopped
+     *
+     * Indicates whether the instance is currently *not* managing periodic executions.
+     *
+     * @returns `true` if the instance has no periodic executions currently scheduled
+     *          or in progress, otherwise `false`.
+     */
     get isStopped(): boolean;
     /**
      * start
@@ -67,6 +77,12 @@ export declare class NonOverlappingPeriodicJobScheduler {
      * Initiates the scheduling of periodic jobs.
      */
     start(): void;
+    /**
+     * waitTillCurrentExecutionSettles
+     *
+     * Resolves when the current execution completes, if called during an ongoing execution.
+     * If no execution is in progress, it resolves immediately.
+     */
     waitTillCurrentExecutionSettles(): Promise<void>;
     /**
      * stop

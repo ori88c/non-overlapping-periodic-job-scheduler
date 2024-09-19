@@ -41,7 +41,7 @@ export const NO_PREVIOUS_EXECUTION = -1;
  * variety of use cases.
  * 
  */
-export type CalculateDelayTillNextExecution = (
+export type CalculateDelayTillNextExecution<JobError = Error> = (
     justFinishedExecutionDurationMs: number,
-    justFinishedExecutionError?: Error
+    justFinishedExecutionError?: JobError
 ) => number;

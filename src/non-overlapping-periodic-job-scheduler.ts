@@ -46,10 +46,10 @@ import { PeriodicJob, CalculateDelayTillNextExecution, NO_PREVIOUS_EXECUTION } f
  * This class is fully covered by unit tests.
  * 
  */
-export class NonOverlappingPeriodicJobScheduler {
+export class NonOverlappingPeriodicJobScheduler<JobError = Error> {
     private _isStopped: boolean = true;
-    private _nextExecutionTimer: NodeJS.Timeout | null = null;
-    private _currentExecutionPromise: Promise<void> | null = null;
+    private _nextExecutionTimer: NodeJS.Timeout = undefined;
+    private _currentExecutionPromise: Promise<void> = undefined;
 
     // The `setTimeout` callback is deliberately non-async, to prevent dangling promises.
     // Such are undesired, as they cannot be awaited, which is crucial for a deterministic
@@ -61,18 +61,28 @@ export class NonOverlappingPeriodicJobScheduler {
     /**
      * constructor
      * 
-     * @param _periodicJob the periodic job
-     * @param _calculateDelayTillNextExecution check full documentation at types.ts
+     * @param _periodicJob A periodic job.
+     * @param _calculateDelayTillNextExecution Function to calculate the delay until the
+     *                                         next execution, based on the duration and
+     *                                         any error thrown by the previous execution.
      */
     constructor(
         private readonly _periodicJob: PeriodicJob,
-        private readonly _calculateDelayTillNextExecution: CalculateDelayTillNextExecution,
+        private readonly _calculateDelayTillNextExecution: CalculateDelayTillNextExecution<JobError>,
     ) { }
 
     public get isCurrentlyExecuting(): boolean {
-        return this._currentExecutionPromise !== null;
+        return this._currentExecutionPromise !== undefined;
     }
 
+    /**
+     * isStopped
+     * 
+     * Indicates whether the instance is currently *not* managing periodic executions.
+     * 
+     * @returns `true` if the instance has no periodic executions currently scheduled
+     *          or in progress, otherwise `false`.
+     */
     public get isStopped(): boolean {
         return this._isStopped;
     }
@@ -92,6 +102,12 @@ export class NonOverlappingPeriodicJobScheduler {
         this._nextExecutionTimer = setTimeout(this._triggerExecution, firstExecutionDelay);   
     }
 
+    /**
+     * waitTillCurrentExecutionSettles
+     * 
+     * Resolves when the current execution completes, if called during an ongoing execution.
+     * If no execution is in progress, it resolves immediately.
+     */
     public waitTillCurrentExecutionSettles(): Promise<void> {
         return this._currentExecutionPromise ?? Promise.resolve();
     }
@@ -108,15 +124,15 @@ export class NonOverlappingPeriodicJobScheduler {
 
         if (this._nextExecutionTimer) {
             clearTimeout(this._nextExecutionTimer);
-            this._nextExecutionTimer = null;
+            this._nextExecutionTimer = undefined;
         }
 
         return this.waitTillCurrentExecutionSettles();
     }
 
     private async _triggerCurrentExecutionAndScheduleNext(): Promise<void> {
-        this._nextExecutionTimer = null;
-        let thrownError: Error | undefined = undefined;
+        this._nextExecutionTimer = undefined;
+        let thrownError: JobError = undefined;
 
         const startTime = Date.now();
         try {
@@ -125,19 +141,28 @@ export class NonOverlappingPeriodicJobScheduler {
             thrownError = err;
         }
 
-        this._currentExecutionPromise = null;
+        this._currentExecutionPromise = undefined;
         if (this._isStopped) {
             return;
         }
 
         const justFinishedExecutionDurationMs = Date.now() - startTime;
         try {
-            const delayTillNextExecution = this._calculateDelayTillNextExecution(justFinishedExecutionDurationMs, thrownError);
-            this._nextExecutionTimer = setTimeout(this._triggerExecution, delayTillNextExecution);       
+            const delayTillNextExecution = this._calculateDelayTillNextExecution(
+                justFinishedExecutionDurationMs,
+                thrownError
+            );
+            this._nextExecutionTimer = setTimeout(
+                this._triggerExecution,
+                delayTillNextExecution
+            );
         } catch (err) {
-            // The calculator should never throw an error, so this scenario is unlikely.
-            // However, we handle it to ensure robustness.
+            // The calculator should never throw an error.
+            // However, we handle this scenario to maintain robustness.
             this._isStopped = true;
+
+            // Propagating an error back to the calling stack can be critical and may crash
+            // the application. Given the severity, this behavior is appropriate.
             throw err;
         }
     }
