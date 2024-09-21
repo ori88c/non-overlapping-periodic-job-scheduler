@@ -70,6 +70,13 @@ class NonOverlappingPeriodicJobScheduler {
             this._currentExecutionPromise = this._triggerCurrentExecutionAndScheduleNext();
         };
     }
+    /**
+     * isCurrentlyExecuting
+     *
+     * Indicates whether the periodic job is actively running, as opposed to being between executions.
+     *
+     * @returns `true` if the periodic job is currently executing, otherwise `false`.
+     */
     get isCurrentlyExecuting() {
         return this._currentExecutionPromise !== undefined;
     }
@@ -98,12 +105,12 @@ class NonOverlappingPeriodicJobScheduler {
         this._nextExecutionTimer = setTimeout(this._triggerExecution, firstExecutionDelay);
     }
     /**
-     * waitTillCurrentExecutionSettles
+     * waitUntilCurrentExecutionCompletes
      *
-     * Resolves when the current execution completes, if called during an ongoing execution.
-     * If no execution is in progress, it resolves immediately.
+     * Resolves when the current execution completes, whether it resolves or rejects, if
+     * called during an ongoing execution. If no execution is in progress, it resolves immediately.
      */
-    waitTillCurrentExecutionSettles() {
+    waitUntilCurrentExecutionCompletes() {
         return this._currentExecutionPromise ?? Promise.resolve();
     }
     /**
@@ -119,7 +126,7 @@ class NonOverlappingPeriodicJobScheduler {
             clearTimeout(this._nextExecutionTimer);
             this._nextExecutionTimer = undefined;
         }
-        return this.waitTillCurrentExecutionSettles();
+        return this.waitUntilCurrentExecutionCompletes();
     }
     async _triggerCurrentExecutionAndScheduleNext() {
         this._nextExecutionTimer = undefined;

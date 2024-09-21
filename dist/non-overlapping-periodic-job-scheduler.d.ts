@@ -61,6 +61,13 @@ export declare class NonOverlappingPeriodicJobScheduler<JobError = Error> {
      *                                         any error thrown by the previous execution.
      */
     constructor(_periodicJob: PeriodicJob, _calculateDelayTillNextExecution: CalculateDelayTillNextExecution<JobError>);
+    /**
+     * isCurrentlyExecuting
+     *
+     * Indicates whether the periodic job is actively running, as opposed to being between executions.
+     *
+     * @returns `true` if the periodic job is currently executing, otherwise `false`.
+     */
     get isCurrentlyExecuting(): boolean;
     /**
      * isStopped
@@ -78,12 +85,12 @@ export declare class NonOverlappingPeriodicJobScheduler<JobError = Error> {
      */
     start(): void;
     /**
-     * waitTillCurrentExecutionSettles
+     * waitUntilCurrentExecutionCompletes
      *
-     * Resolves when the current execution completes, if called during an ongoing execution.
-     * If no execution is in progress, it resolves immediately.
+     * Resolves when the current execution completes, whether it resolves or rejects, if
+     * called during an ongoing execution. If no execution is in progress, it resolves immediately.
      */
-    waitTillCurrentExecutionSettles(): Promise<void>;
+    waitUntilCurrentExecutionCompletes(): Promise<void>;
     /**
      * stop
      *

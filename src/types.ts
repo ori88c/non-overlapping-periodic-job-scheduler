@@ -30,7 +30,7 @@ export const NO_PREVIOUS_EXECUTION = -1;
  * an informed decision.
  * 
  * ## Mimicking the `setInterval` Policy
- * It is possible to mimic the `setInterval` behavior, ensuring a fixed interval between start timestamps.
+ * It is possible to mimic the `setInterval` behavior, ensuring a fixed interval between *start* timestamps.
  * For example, if a 5000ms interval between consecutive starts is desired and the current execution took
  * 1000ms, the next execution delay would be 5000ms - 1000ms = 4000ms.
  * However, be aware that actual execution time might exceed the fixed interval. In such cases, you need to
@@ -38,8 +38,7 @@ export const NO_PREVIOUS_EXECUTION = -1;
  * execution delay to 0ms. Another approach could be scheduling the next execution to the next 5000ms 
  * interval from the start, i.e., 5000 - (justFinishedExecutionDurationMs % 5000).
  * This flexibility in delegating the decision-making to users makes this component well-suited for a 
- * variety of use cases.
- * 
+ * variety of use cases. 
  */
 export type CalculateDelayTillNextExecution<JobError = Error> = (
     justFinishedExecutionDurationMs: number,

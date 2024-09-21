@@ -71,6 +71,13 @@ export class NonOverlappingPeriodicJobScheduler<JobError = Error> {
         private readonly _calculateDelayTillNextExecution: CalculateDelayTillNextExecution<JobError>,
     ) { }
 
+    /**
+     * isCurrentlyExecuting
+     * 
+     * Indicates whether the periodic job is actively running, as opposed to being between executions.
+     * 
+     * @returns `true` if the periodic job is currently executing, otherwise `false`.
+     */
     public get isCurrentlyExecuting(): boolean {
         return this._currentExecutionPromise !== undefined;
     }
@@ -103,12 +110,12 @@ export class NonOverlappingPeriodicJobScheduler<JobError = Error> {
     }
 
     /**
-     * waitTillCurrentExecutionSettles
+     * waitUntilCurrentExecutionCompletes
      * 
-     * Resolves when the current execution completes, if called during an ongoing execution.
-     * If no execution is in progress, it resolves immediately.
+     * Resolves when the current execution completes, whether it resolves or rejects, if
+     * called during an ongoing execution. If no execution is in progress, it resolves immediately.
      */
-    public waitTillCurrentExecutionSettles(): Promise<void> {
+    public waitUntilCurrentExecutionCompletes(): Promise<void> {
         return this._currentExecutionPromise ?? Promise.resolve();
     }
 
@@ -127,7 +134,7 @@ export class NonOverlappingPeriodicJobScheduler<JobError = Error> {
             this._nextExecutionTimer = undefined;
         }
 
-        return this.waitTillCurrentExecutionSettles();
+        return this.waitUntilCurrentExecutionCompletes();
     }
 
     private async _triggerCurrentExecutionAndScheduleNext(): Promise<void> {

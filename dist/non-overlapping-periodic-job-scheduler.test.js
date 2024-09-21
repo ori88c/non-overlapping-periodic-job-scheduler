@@ -51,11 +51,11 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
         jest.useRealTimers();
     });
     describe('Happy path tests', () => {
-        test('should trigger executions as expected, when all executions succeed', async () => {
-            // Each job execution returns a pending promise, and we store its resolve callback,
-            // which enables us to control the flow (resolve time).
-            let resolveCurrentJobExecution;
-            const job = () => new Promise(res => resolveCurrentJobExecution = res);
+        test('should trigger executions as expected when all jobs succeed', async () => {
+            // We create unresolved promises, simulating an async work in progress.
+            // They will be resolved later, once we want to simulate a successful completion of the async work.
+            let completeCurrentJob;
+            const job = () => new Promise(res => completeCurrentJob = res);
             const jobSpy = jest.fn()
                 .mockImplementation(job);
             const scheduler = new index_1.NonOverlappingPeriodicJobScheduler(jobSpy, nextDelayCalculatorSpy);
@@ -75,8 +75,8 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
                 expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(true); // Until we resolve, the promise is in a pending state.
-                resolveCurrentJobExecution();
-                await scheduler.waitTillCurrentExecutionSettles();
+                completeCurrentJob();
+                await scheduler.waitUntilCurrentExecutionCompletes();
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(false);
             }
@@ -84,11 +84,11 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
             expect(scheduler.isStopped).toBe(true);
             expect(scheduler.isCurrentlyExecuting).toBe(false);
         });
-        test('should trigger executions as expected, when all executions fail (job promise rejects)', async () => {
-            // Each job execution returns a pending promise, and we store its reject callback,
-            // which enables us to control the flow (resolve time).
-            let rejectCurrentJobExecution;
-            const job = () => new Promise((_, rej) => rejectCurrentJobExecution = rej);
+        test('should handle job rejections and trigger executions as expected', async () => {
+            // We create unresolved promises, simulating an async work in progress.
+            // They will be rejected later, once we want to simulate a failed-completion of the async work.
+            let completeCurrentJob;
+            const job = () => new Promise((_, rej) => completeCurrentJob = rej);
             const jobSpy = jest.fn()
                 .mockImplementation(job);
             const scheduler = new index_1.NonOverlappingPeriodicJobScheduler(jobSpy, nextDelayCalculatorSpy);
@@ -108,8 +108,8 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
                 expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(true); // Until we reject, the promise is in a pending state.
-                rejectCurrentJobExecution(new Error('Why bad things happen to good jobs?'));
-                await scheduler.waitTillCurrentExecutionSettles();
+                completeCurrentJob(new Error('Why bad things happen to good schedulers?'));
+                await scheduler.waitUntilCurrentExecutionCompletes();
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(false);
             }
@@ -117,18 +117,13 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
             expect(scheduler.isStopped).toBe(true);
             expect(scheduler.isCurrentlyExecuting).toBe(false);
         });
-        test('should trigger executions as expected, when some succeed and some fail', async () => {
-            let jobNumber = 1;
-            let finishCurrentJobExecution; // Either resolve or reject.
+        test('should handle mixed job outcomes (success or failure) and trigger executions as expected', async () => {
+            let ithJobExecution = 1;
+            let completeCurrentJob; // Either resolves or rejects.
             const job = () => {
                 return new Promise((res, rej) => {
-                    if (jobNumber % 2 == 0) {
-                        finishCurrentJobExecution = res;
-                    }
-                    else {
-                        finishCurrentJobExecution = rej;
-                    }
-                    ++jobNumber;
+                    completeCurrentJob = (ithJobExecution % 2 === 0) ? res : rej;
+                    ++ithJobExecution;
                 });
             };
             const jobSpy = jest.fn()
@@ -150,8 +145,8 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
                 expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(true);
-                finishCurrentJobExecution();
-                await scheduler.waitTillCurrentExecutionSettles();
+                completeCurrentJob();
+                await scheduler.waitUntilCurrentExecutionCompletes();
                 expect(scheduler.isStopped).toBe(false);
                 expect(scheduler.isCurrentlyExecuting).toBe(false);
             }
