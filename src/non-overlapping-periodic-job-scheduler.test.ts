@@ -8,6 +8,16 @@ import {
 type PromiseResolveCallbackType = (value?: unknown) => void;
 type PromiseRejectCallbackType = (reason?: Error) => void;
 
+interface CustomJobError extends Error {
+  jobID: number;
+}
+
+const createError = (jobID: number): CustomJobError => ({
+  name: 'CustomJobError',
+  message: `Job no. ${jobID} has failed`,
+  jobID
+});
+
 /**
  * resolveFast
  * 
@@ -22,43 +32,53 @@ const MOCK_FIRST_EXECUTION_MS_DELAY = 500;
 const MOCK_MS_DELAY_AFTER_FAILED_JOB = 3 * 1000;
 const MOCK_INTERVAL_BETWEEN_CONSECUTIVE_STARTS = 5 * 1000;
 
-/**
- * mockCalculateDelayTillNextExecution
- *
- * Note: This implementation is intended to be illustrative in the context of these tests,
- * as all timers are mocked (delay times do not impact execution time). A simple Jest mock
- * function would suffice.
- * 
- * This function mimics a real-life scenario by maintaining a fixed interval between the
- * start times of consecutive executions, similar to `setInterval`.
- * If an execution lasts longer than expected, the next execution is scheduled according
- * to the originally planned start time.
- */
-const mockCalculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
-  justFinishedExecutionDurationMs: number,
-  justFinishedExecutionError?: Error
-): number => {
-  if (justFinishedExecutionDurationMs === NO_PREVIOUS_EXECUTION) {
-    return MOCK_FIRST_EXECUTION_MS_DELAY;
-  }
-
-  if (justFinishedExecutionError) {
-    return MOCK_MS_DELAY_AFTER_FAILED_JOB;
-  }
-
-  // For example, if a just-finished execution took 1000ms, and the desired interval-between-starts is
-  // 5000ms, the next execution should start within 4000ms.
-  return MOCK_INTERVAL_BETWEEN_CONSECUTIVE_STARTS -
-    (justFinishedExecutionDurationMs % MOCK_INTERVAL_BETWEEN_CONSECUTIVE_STARTS);
-};
-
 describe('NonOverlappingPeriodicJobScheduler tests', () => {
   let setTimeoutSpy: jest.SpyInstance;
   let nextDelayCalculatorSpy: jest.MockedFunction<CalculateDelayTillNextExecution>;
+  let lastThrownError: CustomJobError;
+
+  /**
+   * mockCalculateDelayTillNextExecution
+   *
+   * This implementation is provided as an illustrative example for the context of these tests.
+   * While a basic Jest mock function would suffice, this implementation demonstrates a potential
+   * real-world scenario.
+   * Since we use Jest's mock timers, the mock delay times do not affect the tests' execution time.
+   * 
+   * This function mimics a real-life scenario by maintaining a fixed interval between the
+   * start times of consecutive executions, similar to `setInterval`.
+   * If an execution lasts longer than expected, the next execution is scheduled according
+   * to the originally planned start time.
+   */
+  const mockCalculateDelayTillNextExecution: CalculateDelayTillNextExecution<CustomJobError> = (
+    justFinishedExecutionDurationMs: number,
+    justFinishedExecutionError?: CustomJobError
+  ): number => {
+    if (justFinishedExecutionError) {
+      expect(justFinishedExecutionError).toBe(lastThrownError);
+      expect(justFinishedExecutionError).toEqual(lastThrownError);
+    } else {
+      expect(lastThrownError).toBeUndefined();
+    }
+
+    if (justFinishedExecutionDurationMs === NO_PREVIOUS_EXECUTION) {
+      return MOCK_FIRST_EXECUTION_MS_DELAY;
+    }
+
+    if (justFinishedExecutionError) {
+      return MOCK_MS_DELAY_AFTER_FAILED_JOB;
+    }
+
+    // For example, if a just-finished execution took 1000ms, and the desired interval-between-starts
+    // is 5000ms, the next execution should start within 4000ms.
+    return MOCK_INTERVAL_BETWEEN_CONSECUTIVE_STARTS -
+      (justFinishedExecutionDurationMs % MOCK_INTERVAL_BETWEEN_CONSECUTIVE_STARTS);
+  };
 
   beforeEach(() => {
     jest.useFakeTimers();
     setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    lastThrownError = undefined;
 
     nextDelayCalculatorSpy = jest.fn() as jest.MockedFunction<CalculateDelayTillNextExecution>;
     nextDelayCalculatorSpy.mockImplementation(mockCalculateDelayTillNextExecution);
@@ -89,16 +109,16 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
 
       scheduler.start();
       const numberOfExecutions = 14;
-      for (let currentExecution = 1; currentExecution <= numberOfExecutions; ++currentExecution) {
+      for (let ithExecution = 1; ithExecution <= numberOfExecutions; ++ithExecution) {
         expect(scheduler.isStopped).toBe(false);
         expect(scheduler.isCurrentlyExecuting).toBe(false);
-        expect(setTimeoutSpy).toHaveBeenCalledTimes(currentExecution);
-        expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(currentExecution);
+        expect(setTimeoutSpy).toHaveBeenCalledTimes(ithExecution);
+        expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(ithExecution);
 
         // The next-execution's `setTimeout` callback will be invoked now.
         jest.runOnlyPendingTimers();
         await resolveFast();
-        expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
+        expect(jobSpy).toHaveBeenCalledTimes(ithExecution);
         expect(scheduler.isStopped).toBe(false);
         expect(scheduler.isCurrentlyExecuting).toBe(true); // Until we resolve, the promise is in a pending state.
 
@@ -116,13 +136,13 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
     test('should handle job rejections and trigger executions as expected', async () => {
       // We create unresolved promises, simulating an async work in progress.
       // They will be rejected later, once we want to simulate a failed-completion of the async work.
-      let completeCurrentJob: PromiseRejectCallbackType;
+      let failCurrentJob: PromiseRejectCallbackType;
       const job: PeriodicJob = (): Promise<void> => 
-        new Promise((_, rej) => completeCurrentJob = rej);
+        new Promise((_, rej) => failCurrentJob = rej);
       const jobSpy = (jest.fn() as jest.MockedFunction<PeriodicJob>)
         .mockImplementation(job);
 
-      const scheduler = new NonOverlappingPeriodicJobScheduler(
+      const scheduler = new NonOverlappingPeriodicJobScheduler<CustomJobError>(
         jobSpy,
         nextDelayCalculatorSpy
       );
@@ -133,23 +153,22 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
 
       scheduler.start();
       const numberOfExecutions = 15;
-      for (let currentExecution = 1; currentExecution <= numberOfExecutions; ++currentExecution) {
+      for (let ithExecution = 1; ithExecution <= numberOfExecutions; ++ithExecution) {
         expect(scheduler.isStopped).toBe(false);
         expect(scheduler.isCurrentlyExecuting).toBe(false);
-        expect(setTimeoutSpy).toHaveBeenCalledTimes(currentExecution);
-        expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(currentExecution);
+        expect(setTimeoutSpy).toHaveBeenCalledTimes(ithExecution);
+        expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(ithExecution);
 
         // The next-execution's `setTimeout` callback will be invoked now.
         jest.runOnlyPendingTimers();
         await resolveFast();
-        expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
+        expect(jobSpy).toHaveBeenCalledTimes(ithExecution);
         expect(scheduler.isStopped).toBe(false);
         expect(scheduler.isCurrentlyExecuting).toBe(true); // Until we reject, the promise is in a pending state.
 
-        completeCurrentJob(new Error('Why bad things happen to good schedulers?'));
+        lastThrownError = createError(ithExecution);
+        failCurrentJob(lastThrownError);
         await scheduler.waitUntilCurrentExecutionCompletes();
-        expect(scheduler.isStopped).toBe(false);
-        expect(scheduler.isCurrentlyExecuting).toBe(false);
       }
 
       await scheduler.stop();
@@ -160,16 +179,25 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
     test('should handle mixed job outcomes (success or failure) and trigger executions as expected', async () => {
       let ithJobExecution = 1;
       let completeCurrentJob: () => void; // Either resolves or rejects.
-      const job: PeriodicJob = (): Promise<void> => {
-        return new Promise((res, rej) => {
-          completeCurrentJob = (ithJobExecution % 2 === 0) ? res : rej;
-          ++ithJobExecution;
-        });
-      };
+      const job: PeriodicJob = () => new Promise((res, rej) => {
+        lastThrownError = undefined;
+        const shouldSucceed = ithJobExecution % 2 === 0;
+
+        completeCurrentJob = (): void => {
+          if (shouldSucceed) {
+            res();
+          } else {
+            lastThrownError = createError(ithJobExecution);
+            rej(lastThrownError);
+          }
+        };
+
+        ++ithJobExecution;
+      });
       const jobSpy = (jest.fn() as jest.MockedFunction<PeriodicJob>)
         .mockImplementation(job);
 
-      const scheduler = new NonOverlappingPeriodicJobScheduler(
+      const scheduler = new NonOverlappingPeriodicJobScheduler<CustomJobError>(
         jobSpy,
         nextDelayCalculatorSpy
       );
@@ -180,23 +208,21 @@ describe('NonOverlappingPeriodicJobScheduler tests', () => {
 
       scheduler.start();
       const numberOfExecutions = 14;
-      for (let currentExecution = 1; currentExecution <= numberOfExecutions; ++currentExecution) {
+      for (let ithExecution = 1; ithExecution <= numberOfExecutions; ++ithExecution) {
         expect(scheduler.isStopped).toBe(false);
         expect(scheduler.isCurrentlyExecuting).toBe(false);
-        expect(setTimeoutSpy).toHaveBeenCalledTimes(currentExecution);
-        expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(currentExecution);
+        expect(setTimeoutSpy).toHaveBeenCalledTimes(ithExecution);
+        expect(nextDelayCalculatorSpy).toHaveBeenCalledTimes(ithExecution);
 
         // The next-execution's `setTimeout` callback will be invoked now.
         jest.runOnlyPendingTimers();
         await resolveFast();
-        expect(jobSpy).toHaveBeenCalledTimes(currentExecution);
+        expect(jobSpy).toHaveBeenCalledTimes(ithExecution);
         expect(scheduler.isStopped).toBe(false);
         expect(scheduler.isCurrentlyExecuting).toBe(true);
 
         completeCurrentJob();
         await scheduler.waitUntilCurrentExecutionCompletes();
-        expect(scheduler.isStopped).toBe(false);
-        expect(scheduler.isCurrentlyExecuting).toBe(false);
       }
 
       await scheduler.stop();
