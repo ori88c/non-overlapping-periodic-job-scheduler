@@ -1,7 +1,7 @@
 {
   "name": "non-overlapping-periodic-job-scheduler",
-  "version": "3.0.1",
-  "description": "Periodic job scheduler for Node.js projects, ensuring non-overlapping executions and deterministic termination. Features a dynamically chosen interval between executions, determined by a user-injected calculator function, which can take into account the duration of the last execution and any error it may have thrown.",
+  "version": "3.0.2",
+  "description": "Periodic job scheduler for Node.js projects, ensuring non-overlapping executions and deterministic termination. Features a dynamically chosen interval between executions, determined by a user-injected calculator function, which can take into account the duration of the last execution and any error it may have thrown. Additionally, it incorporates mechanisms for graceful termination and error handling, making it suitable for complex scenarios.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ori88c/non-overlapping-periodic-job-scheduler.git"
@@ -40,7 +40,9 @@
     "executor",
     "executions",
     "task-manager",
+    "task-scheduler",
     "job-manager",
+    "job-scheduler",
     "async",
     "runner",
     "execution",
