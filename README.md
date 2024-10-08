@@ -4,7 +4,26 @@ The `NonOverlappingPeriodicJobScheduler` class implements a slim yet highly flex
 
 The delay between executions is determined by a user-defined calculator function, allowing scheduling to be either interval-based or time-based, while also considering runtime factors known to the user.
 
-## Key Features :sparkles:
+## Table of Contents
+
+* [Key Features](#key-features)
+* [Non-Overlapping Executions](#non-overlapping-executions)
+* [Graceful and Deterministic Termination](#graceful-termination)
+* [Dynamic Execution Interval](#dynamic-execution-interval)
+* [Zero Over-Engineering, No External Dependencies](#no-dependencies)
+* [Non-Persistent Scheduling](#non-persistent)
+* [API](#api)
+* [Getter Methods](#getter-methods)
+* [Error Handling](#error-handling)
+* [Use-case Example](#use-case-example)
+* [Time-Based Scheduling Policies](#time-based-scheduling-examples)
+* [Interval-Based Scheduling Policies](#interval-based-scheduling-examples)
+* [Breaking Change in Version 2.0.0](#breaking-change-2)
+* [Breaking Change in Version 3.0.0](#breaking-change-3)
+* [Naming Convention](#naming-convention)
+* [License](#license)
+
+## Key Features :sparkles:<a id="key-features"></a>
 
 * __Non-Overlapping Executions__.
 * __Deterministic Termination__: If the `stop` method is called during a job-execution, it will resolve only once the execution completes.
@@ -16,18 +35,18 @@ The delay between executions is determined by a user-defined calculator function
 * ES2020 Compatibility.
 * TypeScript support.
 
-## Non-Overlapping Executions
+## Non-Overlapping Executions<a id="non-overlapping-executions"></a>
 
 Executions do not overlap because the (i+1)th execution is scheduled immediately **after** the ith execution completes. This is suitable for scenarios where overlapping executions may cause race conditions, or negatively impact performance.
 
-## Graceful and Deterministic Termination :hourglass:
+## Graceful and Deterministic Termination :hourglass:<a id="graceful-termination"></a>
 
 This topic is **often overlooked** in the context of schedulers.  
 When stopping periodic executions, it is crucial to ensure that any potentially ongoing execution is completed before termination. This deterministic termination approach ensures that no unfinished executions leave objects in memory, which could otherwise lead to unexpected behavior.
 
 Without deterministic termination, leftover references from incomplete executions can cause issues, such as unexpected behavior during unit tests. A clean state is necessary for each test, and ongoing jobs from a previous test can interfere with subsequent tests.
 
-## Dynamic Execution Interval
+## Dynamic Execution Interval<a id="dynamic-execution-interval"></a>
 
 User provides a custom calculator function, to determine the delay until the next execution, based on the runtime metadata of the just-finished execution (duration, error if thrown).
 
@@ -35,7 +54,18 @@ This calculator is invoked at the **end** of each execution, enabling flexible i
 * __Information Expert Principle__: The interval policy is defined by the user.
 * __Single Responsibility Principle__: The scheduler's sole responsibility is to manage the scheduling process.
 
-## API
+## Zero Over-Engineering, No External Dependencies<a id="no-dependencies"></a>
+
+This component offers a lightweight, dependency-free solution. It can also serve as a building block for
+more advanced implementations, if necessary.
+
+## Non-Persistent Scheduling<a id="non-persistent"></a>
+
+This component features non-durable scheduling, which means that if the app crashes or goes down, scheduling stops.
+
+If you need to guarantee durability over a multi-node deployment, consider using this scheduler as a building block or use other custom-made solutions for that purpose. Generally, maintaining a timestamp of the last successful execution in a persistent database is usually sufficient to introduce durability.
+
+## API :globe_with_meridians:<a id="api"></a>
 
 The `NonOverlappingPeriodicJobScheduler` class provides the following methods:
 
@@ -45,18 +75,18 @@ The `NonOverlappingPeriodicJobScheduler` class provides the following methods:
 
 If needed, refer to the code documentation for a more comprehensive description of each method.
 
-## Getter Methods
+## Getter Methods :mag:<a id="getter-methods"></a>
 
 The `NonOverlappingPeriodicJobScheduler` class provides the following getter methods to reflect the scheduler's current state:
 
 * __isCurrentlyExecuting__: Indicates whether the periodic job is actively running, as opposed to being between executions.
 * __isStopped__: Indicates whether the instance is currently *not* managing periodic executions.
 
-## Error Handling :warning:
+## Error Handling :warning:<a id="error-handling"></a>
 
 If a periodic job throws an error, the error will be passed to the calculator function. The scheduler does not perform any logging, as it is designed to be **agnostic of user preferences**, such as specific loggers or logging styles.
 
-## Use-case Example :man_technologist:
+## Use-case Example :man_technologist:<a id="use-case-example"></a>
 
 ```ts
 import { 
@@ -101,7 +131,7 @@ class ThreatIntelligenceAggregator {
 }
 ```
 
-## Time-Based Scheduling Policy
+## Time-Based Scheduling Policies :clock3:<a id="time-based-scheduling-examples"></a>
 
 Time-based scheduling disregards the execution's metadata (such as duration or thrown errors) and is measured against absolute timestamps on the clock.
 
@@ -136,7 +166,7 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution =
   };
 ```
 
-## Interval-Based Scheduling Policies
+## Interval-Based Scheduling Policies :repeat:<a id="interval-based-scheduling-examples"></a>
 
 Interval-based scheduling ignores absolute timestamps on the clock. It is applicable when the interval between executions matters more than the exact timing of each execution. Unlike most schedulers, this variant allows the gap to be determined during runtime, enabling consideration of runtime factors.
 
@@ -239,26 +269,15 @@ const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = (
 };
 ```
 
-## Zero Over-Engineering, No External Dependencies
-
-This component offers a lightweight, dependency-free solution. It can also serve as a building block for
-more advanced implementations, if necessary.
-
-## Non-Persistent Scheduling
-
-This component features non-durable scheduling, which means that if the app crashes or goes down, scheduling stops.
-
-If you need to guarantee durability over a multi-node deployment, consider using this scheduler as a building block or use other custom-made solutions for that purpose. Generally, maintaining a timestamp of the last successful execution in a persistent database is usually sufficient to introduce durability.
-
-## Breaking Change in Version 2.0.0
+## Breaking Change in Version 2.0.0<a id="breaking-change-2"></a>
 
 In version 2.0.0, the target compatibility has been upgraded from ES6 to ES2020. This change was made to leverage the widespread adoption of ES2020, in particular its native support for async/await.
 
-## Breaking Change in Version 3.0.0
+## Breaking Change in Version 3.0.0<a id="breaking-change-3"></a>
 
 In version 3.0.0, the method `waitTillCurrentExecutionSettles` was renamed to `waitUntilCurrentExecutionCompletes` for improved clarify.
 
-## Naming Convention
+## Naming Convention<a id="naming-convention"></a>
 
 It is highly recommended to assign a use-case-specific name to your scheduler instances. This practice helps in clearly identifying the purpose of each scheduler in the codebase. Examples include:
 - deleteExpiredDataScheduler
@@ -267,6 +286,6 @@ It is highly recommended to assign a use-case-specific name to your scheduler in
 - healthDiagnosticsScheduler
 - archiveOldLogsScheduler
 
-## License :scroll:
+## License :scroll:<a id="license"></a>
 
 [MIT](LICENSE)
