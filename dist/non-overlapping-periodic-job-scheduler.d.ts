@@ -38,11 +38,11 @@ import { PeriodicJob, CalculateDelayTillNextExecution } from './types';
  *
  * ## Error Handling
  * If a periodic job throws an error, the error will be passed to the calculator function. The scheduler
- * does not perform any logging, as it is designed to be agnostic of user preferences, such as specific
+ * does *not* perform any logging, as it is designed to be agnostic of user preferences, such as specific
  * loggers or logging styles.
  *
- * ## Fully Coverged
- * This class is fully covered by unit tests.
+ * ## Tests
+ * This class is fully covered by extensive unit tests.
  *
  */
 export declare class NonOverlappingPeriodicJobScheduler<JobError = Error> {
