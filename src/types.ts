@@ -13,6 +13,10 @@ export const NO_PREVIOUS_EXECUTION = -1;
  * - `justFinishedExecutionDurationMs`: The duration of the just-finished execution in milliseconds.
  * - `justFinishedExecutionError`: The error thrown by the just-finished execution, if any.
  * 
+ * Both arguments are optional, even though the scheduler **always provides** the first argument.
+ * This design enables users to ignore the `justFinishedExecutionDurationMs` argument when it is
+ * irrelevant, while preventing potential TypeScript or linting errors caused by unused arguments.
+ * 
  * ## Base Case
  * The first invocation is triggered by the `start` method, using `NO_PREVIOUS_EXECUTION` as the 
  * pseudo previous-execution-duration. In this scenario, the user determines the first delay without 
@@ -41,6 +45,6 @@ export const NO_PREVIOUS_EXECUTION = -1;
  * variety of use cases. 
  */
 export type CalculateDelayTillNextExecution<JobError = Error> = (
-    justFinishedExecutionDurationMs: number,
+    justFinishedExecutionDurationMs?: number,
     justFinishedExecutionError?: JobError
 ) => number;

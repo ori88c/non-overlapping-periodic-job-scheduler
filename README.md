@@ -26,7 +26,7 @@ The delay between executions is determined by a user-defined calculator function
 ## Key Features :sparkles:<a id="key-features"></a>
 
 * __Non-Overlapping Executions__.
-* __Deterministic Termination__: If the `stop` method is called during a job-execution, it will resolve only once the execution completes.
+* __Graceful Shutdown__: When the `stop` method is invoked during job execution, it resolves only after the execution is complete. This ensures a deterministic termination, making it suitable for use in the _onModuleDestroy_ method of [Nest.js](https://docs.nestjs.com/fundamentals/lifecycle-events) or similar scenarios.
 * __Dynamic Interval between Executions__: This design allows users to consider various runtime factors if required, while the scheduler remains agnostic to the user-defined scheduling policy.
 * __Comprehensive documentation :books:__: The class is thoroughly documented, enabling IDEs to provide helpful tooltips that enhance the coding experience.
 * __Fully Tested :test_tube:__: Extensively covered by unit tests.
@@ -39,7 +39,7 @@ The delay between executions is determined by a user-defined calculator function
 
 Executions do not overlap because the (i+1)th execution is scheduled immediately **after** the ith execution completes. This is suitable for scenarios where overlapping executions may cause race conditions, or negatively impact performance.
 
-## Graceful and Deterministic Termination :hourglass:<a id="graceful-termination"></a>
+## Graceful Shutdown :hourglass:<a id="graceful-termination"></a>
 
 This topic is **often overlooked** in the context of schedulers.  
 When stopping periodic executions, it is crucial to ensure that any potentially ongoing execution is completed before termination. This deterministic termination approach ensures that no unfinished executions leave objects in memory, which could otherwise lead to unexpected behavior.
@@ -98,11 +98,11 @@ import {
 
 const MS_DELAY_AFTER_COMPLETION = 5000;
 const calculateDelayTillNextFetch: CalculateDelayTillNextExecution =
-  (_: number): number => {
+  (): number => {
     // Simplest possible implementation:
     // After each execution, the scheduler waits a fixed duration (5000 ms),
     // before triggering the next one.
-    // First execution starts 5000ms after `start()` is called.
+    // First execution starts 5000ms after `start` is called.
     return MS_DELAY_AFTER_COMPLETION;
   };
 
@@ -133,7 +133,8 @@ class ThreatIntelligenceAggregator {
 
 ## Time-Based Scheduling Policies :clock3:<a id="time-based-scheduling-examples"></a>
 
-Time-based scheduling disregards the execution's metadata (such as duration or thrown errors) and is measured against absolute timestamps on the clock.
+Time-based scheduling **disregards** the execution's metadata (such as duration or thrown errors) and is measured against absolute timestamps on the clock.  
+Both arguments of type `CalculateDelayTillNextExecution` are optional, even though the scheduler **always provides** the first argument. This design enables users to ignore the `justFinishedExecutionDurationMs` argument when it is irrelevant, while preventing potential TypeScript or linting errors caused by unused arguments.
 
 ### Every 20 minutes on the clock :man_technologist:
 
@@ -141,7 +142,7 @@ Consider a scenario where executions should occur at fixed times of the day, for
 ```ts
 const MS_DELAY_BETWEEN_STARTS = 20 * 60 * 1000; // 20 minutes in milliseconds.
 const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = 
-  (_: number): number => {
+  (): number => {
     return MS_DELAY_BETWEEN_STARTS - Date.now() % MS_DELAY_BETWEEN_STARTS;
   };
 ```
@@ -153,7 +154,7 @@ Consider a scenario where the execution should occur once a day at 16:00 (4 PM).
 ```ts
 const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
 const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = 
-  (_: number): number => {
+  (): number => {
     const todayAt16 = new Date();
     todayAt16.setHours(16, 0, 0, 0);
 
@@ -176,7 +177,7 @@ Let's start with the simplest example, which involves having a fixed interval. F
 ```ts
 const FIXED_MS_DELAY_BETWEEN_EXECUTIONS = 5000;
 const calculateDelayTillNextExecution: CalculateDelayTillNextExecution = 
-  (justFinishedExecutionDurationMs: number) => FIXED_MS_DELAY_BETWEEN_EXECUTIONS;
+  () => FIXED_MS_DELAY_BETWEEN_EXECUTIONS;
 ```
 
 ### Considering the Error Argument :man_technologist:
