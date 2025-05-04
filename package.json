@@ -1,7 +1,7 @@
 {
   "name": "non-overlapping-periodic-job-scheduler",
-  "version": "3.1.0",
-  "description": "Periodic job scheduler for Node.js projects, ensuring non-overlapping executions and deterministic termination. Features a dynamically chosen interval between executions, determined by a user-injected calculator function, which can take into account the duration of the last execution and any error it may have thrown. Additionally, it incorporates mechanisms for graceful termination and error handling, making it suitable for complex scenarios.",
+  "version": "4.0.0",
+  "description": "Periodic job scheduler for Node.js that ensures non-overlapping executions and supports graceful teardown with resource deallocation. It dynamically calculates intervals based on user-defined logic, considering the duration and any error thrown by the last execution. The package includes robust error handling, making it ideal for complex scenarios requiring controlled execution flows.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ori88c/non-overlapping-periodic-job-scheduler.git"
@@ -11,8 +11,9 @@
   ],
   "homepage": "https://github.com/ori88c/non-overlapping-periodic-job-scheduler#readme",
   "author": "Ori Cohen",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
+    "format": "prettier --write \"src/**/*.ts\"",
     "build": "tsc",
     "prepare": "npm run build",
     "test": "jest"
@@ -29,7 +30,11 @@
     "recurring-task",
     "non-overlap",
     "non-overlapping",
-    "interval",
+    "graceful-teardown",
+    "graceful-shutdown",
+    "smooth-teardown",
+    "smooth-shutdown",
+    "resource-cleanup",
     "disjoint-interval",
     "disjoint-executions",
     "disjoint-runs",
@@ -37,6 +42,8 @@
     "dynamic-interval",
     "flexible-interval",
     "customized-interval",
+    "runtime-factors",
+    "adaptable-schedule",
     "executor",
     "executions",
     "task-manager",
@@ -48,7 +55,7 @@
     "execution",
     "typescript",
     "ts",
-    "node.js"
+    "nodejs"
   ],
   "engines": {
     "node": ">=14.5.0"
@@ -56,6 +63,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "jest": "^29.7.0",
+    "prettier": "^3.5.3",
     "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.2"
